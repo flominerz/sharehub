@@ -15,7 +15,7 @@ const SupabaseDebugPanel: React.FC = () => {
       setReport(verificationReport)
     } catch (error) {
       console.error('Verification failed:', error)
-      setReport({ error: error.message })
+      setReport({ error: error instanceof Error ? error.message : String(error) })
     } finally {
       setIsLoading(false)
     }
@@ -28,7 +28,7 @@ const SupabaseDebugPanel: React.FC = () => {
       setTestResult(result)
     } catch (error) {
       console.error('Registration test failed:', error)
-      setTestResult({ success: false, error: error.message })
+      setTestResult({ success: false, error: error instanceof Error ? error.message : String(error) })
     } finally {
       setIsLoading(false)
     }

@@ -59,7 +59,7 @@ const dbVerification = {
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       }
     }
   },
@@ -77,7 +77,7 @@ const dbVerification = {
       return {
         canAccessAuth: false,
         currentUser: null,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       }
     }
   }
@@ -101,7 +101,7 @@ export class SupabaseVerification {
     } catch (error) {
       return {
         connected: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       }
     }
   }
@@ -162,7 +162,7 @@ export class SupabaseVerification {
       console.error('❌ Registration test error:', error)
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       }
     }
   }
@@ -183,7 +183,7 @@ export class SupabaseVerification {
     } catch (error) {
       return {
         rlsWorking: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       }
     }
   }
@@ -245,7 +245,7 @@ export class SupabaseVerification {
     } catch (error) {
       return {
         healthy: false,
-        issues: [`Health check failed: ${error.message}`]
+        issues: [`Health check failed: ${error instanceof Error ? error.message : String(error)}`]
       }
     }
   }
