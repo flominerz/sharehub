@@ -208,7 +208,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const fileName = `${user.id}-${Math.random()}.${fileExt}`
       const filePath = `avatars/${fileName}`
 
-      const { data, error } = await authService.supabase.storage
+      const { error } = await authService.supabase.storage
         .from('avatars')
         .upload(filePath, file)
 

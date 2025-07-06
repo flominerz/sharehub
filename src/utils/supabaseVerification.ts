@@ -34,7 +34,7 @@ const dbVerification = {
 
   async testRegistration(email: string, password: string, name: string) {
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { data: { user }, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -53,8 +53,8 @@ const dbVerification = {
 
       return {
         success: true,
-        userId: data.user?.id,
-        user: data.user
+        userId: user?.id,
+        user: user
       }
     } catch (error) {
       return {
@@ -66,11 +66,14 @@ const dbVerification = {
 
   async verifyAuthUsers() {
     try {
-      const { data: { user }, error } = await supabase.auth.getUser()
-      
+      const { error } = await supabase
+        .from('profiles')
+        .select('count')
+        .limit(1)
+
       return {
         canAccessAuth: !error,
-        currentUser: user,
+        currentUser: null,
         error: error?.message
       }
     } catch (error) {
@@ -89,7 +92,7 @@ export class SupabaseVerification {
   // Check database connection
   static async checkConnection() {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profiles')
         .select('count')
         .limit(1)
@@ -148,8 +151,10 @@ export class SupabaseVerification {
         
         // Clean up test user (optional)
         try {
-          await supabase.auth.admin.deleteUser(result.userId)
-          console.log('🧹 Test user cleaned up')
+          if (result.userId) {
+            await supabase.auth.admin.deleteUser(result.userId)
+            console.log('🧹 Test user cleaned up')
+          }
         } catch (cleanupError) {
           console.warn('⚠️ Could not clean up test user:', cleanupError)
         }
@@ -171,7 +176,7 @@ export class SupabaseVerification {
   static async verifyRLSPolicies() {
     try {
       // Test if we can read from profiles (should work for authenticated users)
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profiles')
         .select('id')
         .limit(1)
