@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import AuthModal from './AuthModal'
 import UserMenu from './UserMenu'
 import LanguageSwitcher from './LanguageSwitcher'
+import MobileNavigation from './MobileNavigation'
 
 const Header = () => {
   const location = useLocation()
@@ -49,7 +50,8 @@ const Header = () => {
               </Link>
             </div>
             
-            <nav className="flex items-center space-x-8">
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center space-x-8">
               {navItems.map(({ path, label, icon: Icon }) => (
                 <Link
                   key={path}
@@ -90,6 +92,32 @@ const Header = () => {
                 </div>
               )}
             </nav>
+
+            {/* Mobile Navigation */}
+            <div className="md:hidden flex items-center space-x-4">
+              <LanguageSwitcher />
+              {isLoading ? (
+                <div className="w-6 h-6 animate-spin rounded-full border-2 border-orange-500 border-t-transparent"></div>
+              ) : user ? (
+                <UserMenu />
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleAuthClick('signin')}
+                    className="text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md text-sm font-medium transition-colors"
+                  >
+                    {t('navigation.signIn')}
+                  </button>
+                  <button
+                    onClick={() => handleAuthClick('signup')}
+                    className="bg-orange-500 text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-orange-600 transition-colors"
+                  >
+                    {t('navigation.signUp')}
+                  </button>
+                </div>
+              )}
+              <MobileNavigation />
+            </div>
           </div>
         </div>
       </header>

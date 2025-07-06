@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { authService } from '../lib/authService'
 import { StorageManager } from '../utils/storage'
 
 interface User {
@@ -16,6 +17,8 @@ interface AuthContextType {
   signInWithEmail: (email: string, password: string) => Promise<void>
   signUpWithEmail: (email: string, password: string, name: string) => Promise<void>
   signOut: () => void
+  updateProfile: (updates: Partial<User>) => Promise<void>
+  uploadAvatar: (file: File) => Promise<string>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -32,89 +35,86 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
-declare global {
-  interface Window {
-    google: any
-  }
-}
-
-// Simple in-memory user storage for demo purposes
-// In a real app, this would be a proper backend database
-const mockUsers: Array<{ email: string; password: string; name: string; id: string }> = []
-
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check for existing session on app load with error handling
-    try {
-      const savedUser = StorageManager.getItem<User>('user')
-      if (savedUser) {
-        setUser(savedUser)
-      }
-    } catch (error) {
-      console.error('Error loading saved user:', error)
-      // Clear corrupted data
-      StorageManager.removeItem('user')
-    }
-
-    // Initialize Google Sign-In
-    const initializeGoogleAuth = () => {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-      
-      // Check if we have a valid client ID (not the placeholder)
-      if (!clientId || clientId === 'your_google_client_id_here') {
-        console.warn('Google OAuth client ID not configured. Please set VITE_GOOGLE_CLIENT_ID in your .env file.')
-        setIsLoading(false)
-        return
-      }
-
-      if (window.google) {
-        try {
-          window.google.accounts.id.initialize({
-            client_id: clientId,
-            callback: handleGoogleResponse,
-            auto_select: false,
-            cancel_on_tap_outside: true,
-          })
-          setIsLoading(false)
-        } catch (error) {
-          console.error('Google Auth initialization failed:', error)
-          setIsLoading(false)
+    // Initialize auth state
+    const initializeAuth = async () => {
+      try {
+        setIsLoading(true)
+        
+        // Check for existing session
+        const session = await authService.getSession()
+        
+        if (session?.user) {
+          // Get user profile from database
+          const profile = await authService.getUserProfile(session.user.id)
+          
+          const userData: User = {
+            id: session.user.id,
+            name: profile?.name || session.user.user_metadata?.name || session.user.email || '',
+            email: session.user.email || '',
+            avatar: profile?.avatar_url || session.user.user_metadata?.avatar_url,
+            provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email'
+          }
+          
+          setUser(userData)
+          StorageManager.setItem('user', userData)
+        } else {
+          // Check for stored user (fallback)
+          const savedUser = StorageManager.getItem<User>('user')
+          if (savedUser) {
+            setUser(savedUser)
+          }
         }
-      } else {
-        // Retry after a short delay if Google script hasn't loaded yet
-        setTimeout(initializeGoogleAuth, 100)
+      } catch (error) {
+        console.error('Auth initialization error:', error)
+        // Clear potentially corrupted data
+        StorageManager.removeItem('user')
+      } finally {
+        setIsLoading(false)
       }
     }
 
-    initializeGoogleAuth()
+    initializeAuth()
+
+    // Listen for auth state changes
+    const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        try {
+          const profile = await authService.getUserProfile(session.user.id)
+          
+          const userData: User = {
+            id: session.user.id,
+            name: profile?.name || session.user.user_metadata?.name || session.user.email || '',
+            email: session.user.email || '',
+            avatar: profile?.avatar_url || session.user.user_metadata?.avatar_url,
+            provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email'
+          }
+          
+          setUser(userData)
+          StorageManager.setItem('user', userData)
+        } catch (error) {
+          console.error('Error fetching user profile:', error)
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null)
+        StorageManager.removeItem('user')
+      }
+    })
+
+    return () => {
+      subscription?.unsubscribe()
+    }
   }, [])
 
-  const handleGoogleResponse = async (response: any) => {
+  const signInWithGoogle = async () => {
     try {
       setIsLoading(true)
-      
-      // Decode the JWT token to get user information
-      const payload = JSON.parse(atob(response.credential.split('.')[1]))
-      
-      const googleUser: User = {
-        id: payload.sub,
-        name: payload.name,
-        email: payload.email,
-        avatar: payload.picture,
-        provider: 'google'
-      }
-      
-      setUser(googleUser)
-      
-      // Use StorageManager with error handling
-      const success = StorageManager.setItem('user', googleUser)
-      if (!success) {
-        console.warn('Failed to save user session to storage')
-        // Still allow the user to continue, just warn about session persistence
-      }
+      await authService.signInWithGoogle()
+      // User state will be updated by the auth state change listener
     } catch (error) {
       console.error('Google sign-in error:', error)
       throw error
@@ -123,96 +123,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const signInWithGoogle = async () => {
-    try {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-      
-      // Check if we have a valid client ID
-      if (!clientId || clientId === 'your_google_client_id_here') {
-        throw new Error('Google OAuth not configured. Please set up your Google Client ID in the .env file.')
-      }
-
-      setIsLoading(true)
-      
-      if (window.google) {
-        // Trigger Google Sign-In popup
-        window.google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            // Fallback to renderButton method if prompt doesn't work
-            const buttonContainer = document.createElement('div')
-            buttonContainer.style.position = 'fixed'
-            buttonContainer.style.top = '-1000px'
-            document.body.appendChild(buttonContainer)
-            
-            window.google.accounts.id.renderButton(buttonContainer, {
-              theme: 'outline',
-              size: 'large',
-              type: 'standard',
-            })
-            
-            // Simulate click on the hidden button
-            const button = buttonContainer.querySelector('div[role="button"]') as HTMLElement
-            if (button) {
-              button.click()
-            }
-            
-            // Clean up
-            setTimeout(() => {
-              if (document.body.contains(buttonContainer)) {
-                document.body.removeChild(buttonContainer)
-              }
-            }, 1000)
-          }
-        })
-      } else {
-        throw new Error('Google Sign-In not initialized')
-      }
-    } catch (error) {
-      console.error('Google sign-in error:', error)
-      setIsLoading(false)
-      throw error
-    }
-  }
-
   const signUpWithEmail = async (email: string, password: string, name: string) => {
     try {
       setIsLoading(true)
+      const { data } = await authService.signUp(email, password, name)
       
-      // Check if user already exists
-      const existingUser = mockUsers.find(u => u.email === email)
-      if (existingUser) {
-        throw new Error('User already exists with this email')
-      }
-      
-      // Validate password
-      if (password.length < 6) {
-        throw new Error('Password must be at least 6 characters long')
-      }
-      
-      // Create new user
-      const newUser = {
-        id: 'email_' + Date.now(),
-        email,
-        password, // In a real app, this would be hashed
-        name
-      }
-      
-      mockUsers.push(newUser)
-      
-      // Create user session
-      const user: User = {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        provider: 'email'
-      }
-      
-      setUser(user)
-      
-      // Use StorageManager with error handling
-      const success = StorageManager.setItem('user', user)
-      if (!success) {
-        console.warn('Failed to save user session to storage')
+      if (data.user) {
+        const userData: User = {
+          id: data.user.id,
+          name: name,
+          email: email,
+          provider: 'email'
+        }
+        
+        setUser(userData)
+        StorageManager.setItem('user', userData)
       }
     } catch (error) {
       console.error('Email sign-up error:', error)
@@ -225,28 +150,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signInWithEmail = async (email: string, password: string) => {
     try {
       setIsLoading(true)
-      
-      // Find user
-      const existingUser = mockUsers.find(u => u.email === email && u.password === password)
-      if (!existingUser) {
-        throw new Error('Invalid email or password')
-      }
-      
-      // Create user session
-      const user: User = {
-        id: existingUser.id,
-        name: existingUser.name,
-        email: existingUser.email,
-        provider: 'email'
-      }
-      
-      setUser(user)
-      
-      // Use StorageManager with error handling
-      const success = StorageManager.setItem('user', user)
-      if (!success) {
-        console.warn('Failed to save user session to storage')
-      }
+      await authService.signIn(email, password)
+      // User state will be updated by the auth state change listener
     } catch (error) {
       console.error('Email sign-in error:', error)
       throw error
@@ -255,17 +160,68 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const signOut = () => {
-    setUser(null)
-    StorageManager.removeItem('user')
+  const signOut = async () => {
+    try {
+      await authService.signOut()
+      setUser(null)
+      StorageManager.removeItem('user')
+    } catch (error) {
+      console.error('Sign-out error:', error)
+      // Force local sign out even if remote fails
+      setUser(null)
+      StorageManager.removeItem('user')
+    }
+  }
+
+  const updateProfile = async (updates: Partial<User>) => {
+    if (!user) throw new Error('No user logged in')
     
-    // Sign out from Google
-    if (window.google) {
-      try {
-        window.google.accounts.id.disableAutoSelect()
-      } catch (error) {
-        console.error('Google sign-out error:', error)
-      }
+    try {
+      // Update profile in Supabase
+      const { data, error } = await authService.supabase
+        .from('profiles')
+        .update({
+          name: updates.name,
+          avatar_url: updates.avatar,
+        })
+        .eq('id', user.id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Update local state
+      const updatedUser = { ...user, ...updates }
+      setUser(updatedUser)
+      StorageManager.setItem('user', updatedUser)
+    } catch (error) {
+      console.error('Profile update error:', error)
+      throw error
+    }
+  }
+
+  const uploadAvatar = async (file: File): Promise<string> => {
+    if (!user) throw new Error('No user logged in')
+    
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`
+      const filePath = `avatars/${fileName}`
+
+      const { data, error } = await authService.supabase.storage
+        .from('avatars')
+        .upload(filePath, file)
+
+      if (error) throw error
+
+      const { data: { publicUrl } } = authService.supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      return publicUrl
+    } catch (error) {
+      console.error('Avatar upload error:', error)
+      throw error
     }
   }
 
@@ -275,7 +231,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signInWithGoogle,
     signInWithEmail,
     signUpWithEmail,
-    signOut
+    signOut,
+    updateProfile,
+    uploadAvatar
   }
 
   return (
