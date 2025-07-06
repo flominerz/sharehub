@@ -126,7 +126,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signUpWithEmail = async (email: string, password: string, name: string) => {
     try {
       setIsLoading(true)
-      const { data } = await authService.signUp(email, password, name)
+      const data = await authService.signUp(email, password, name)
       
       if (data.user) {
         const userData: User = {
@@ -178,7 +178,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     try {
       // Update profile in Supabase
-      const { data, error } = await authService.supabase
+      const { error } = await authService.supabase
         .from('profiles')
         .update({
           name: updates.name,

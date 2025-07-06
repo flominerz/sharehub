@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { User, Settings, Calendar, Heart, LogOut, ChevronDown, Camera, Lock } from 'lucide-react'
+import { User, Settings, Calendar, Heart, LogOut, ChevronDown, Camera } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../contexts/AuthContext'

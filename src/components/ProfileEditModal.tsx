@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { X, Camera, Save, Lock, Eye, EyeOff } from 'lucide-react'
+import { X, Camera, Save, Eye, EyeOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -93,7 +93,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Edit Profile</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('profile.editProfile')}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="h-6 w-6" />
           </button>
@@ -130,12 +130,12 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
               onChange={handleAvatarUpload}
               className="hidden"
             />
-            <p className="text-sm text-gray-500 mt-2">Click camera icon to change avatar</p>
+            <p className="text-sm text-gray-500 mt-2">{t('profile.clickCameraToChangeAvatar')}</p>
           </div>
 
           {/* Basic Info */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('auth.fullName')}</label>
             <input
               type="text"
               value={formData.name}
@@ -146,7 +146,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('auth.email')}</label>
             <input
               type="email"
               value={formData.email}
@@ -163,15 +163,14 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
               onClick={() => setShowPasswordChange(!showPasswordChange)}
               className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 font-medium"
             >
-              <Lock className="h-4 w-4" />
-              <span>Change Password</span>
+              <span>{t('profile.changePassword')}</span>
             </button>
           </div>
 
           {showPasswordChange && (
             <div className="space-y-4 border-t pt-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.currentPassword')}</label>
                 <div className="relative">
                   <input
                     type={showCurrentPassword ? 'text' : 'password'}
@@ -191,7 +190,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.newPassword')}</label>
                 <div className="relative">
                   <input
                     type={showNewPassword ? 'text' : 'password'}
@@ -212,7 +211,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.confirmNewPassword')}</label>
                 <input
                   type="password"
                   value={formData.confirmPassword}
@@ -233,7 +232,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
               className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
               disabled={isLoading}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -245,7 +244,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) 
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              <span>{isLoading ? 'Saving...' : 'Save Changes'}</span>
+              <span>{isLoading ? t('common.saving') : t('common.save')}</span>
             </button>
           </div>
         </form>
