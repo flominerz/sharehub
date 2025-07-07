@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "migrate:validate": "node scripts/data-migration-validator.js",
+    "migrate:rollback": "echo 'Run the rollback SQL script in your Supabase SQL Editor'",
+    "db:seed": "echo 'Run the seed migration SQL file in your Supabase SQL Editor'"
   },
   "dependencies": {
     "react": "^18.2.0",
