@@ -89,7 +89,7 @@ export class SupabaseVerification {
   // Check database connection
   static async checkConnection() {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profiles')
         .select('count')
         .limit(1)
@@ -148,8 +148,10 @@ export class SupabaseVerification {
         
         // Clean up test user (optional)
         try {
-          await supabase.auth.admin.deleteUser(result.userId)
-          console.log('🧹 Test user cleaned up')
+          if (result.userId) {
+            await supabase.auth.admin.deleteUser(result.userId)
+            console.log('🧹 Test user cleaned up')
+          }
         } catch (cleanupError) {
           console.warn('⚠️ Could not clean up test user:', cleanupError)
         }
