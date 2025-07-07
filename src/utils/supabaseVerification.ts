@@ -133,7 +133,7 @@ export class SupabaseVerification {
 
   // Test user registration flow
   static async testUserRegistration() {
-    const testEmail = `test-${Date.now()}@example.com`
+    const testEmail = `testuser${Date.now()}@example.com`
     const testPassword = 'TestPassword123!'
     const testName = 'Test User'
 
