@@ -173,7 +173,7 @@ export class SupabaseVerification {
   static async verifyRLSPolicies() {
     try {
       // Test if we can read from profiles (should work for authenticated users)
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profiles')
         .select('id')
         .limit(1)
@@ -205,7 +205,7 @@ export class SupabaseVerification {
       schema,
       rls,
       authUsers,
-      recommendations: []
+      recommendations: [] as string[]
     }
 
     // Generate recommendations
